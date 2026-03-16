@@ -1,0 +1,10 @@
+name: pinksheep
+version: '1.0-SNAPSHOT'
+main: src.pinksheep.Pinksheep
+api-version: '1.21'
+author: YourName
+description: ピンクの羊が出た時にTNTを連発するプラグイン
+commands:
+  spawnpink:
+    description: 動作確認用のピンク羊を1体出します
+    usage: /spawnpink
