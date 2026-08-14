@@ -5,6 +5,7 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.title.Title;
 import org.bukkit.*;
+import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -38,7 +39,7 @@ public final class Pinksheep extends JavaPlugin implements Listener, CommandExec
         if (getCommand("spawnpink") != null) {
             getCommand("spawnpink").setExecutor(this);
         }
-        getLogger().info("PinkSheep Plugin [FULL VERSION] enabled!");
+        getLogger().info("PinkSheep Plugin enabled!");
     }
 
     @Override
@@ -47,8 +48,12 @@ public final class Pinksheep extends JavaPlugin implements Listener, CommandExec
             sender.sendMessage("Game-only command.");
             return true;
         }
-        Sheep sheep = (Sheep) player.getWorld().spawnEntity(player.getLocation(), EntityType.SHEEP);
-        sheep.setColor(DyeColor.PINK);
+
+        // スポーンイベント(EntitySpawnEvent)が発火する前に色をピンクに設定
+        player.getWorld().spawn(player.getLocation(), Sheep.class, sheep -> {
+            sheep.setColor(DyeColor.PINK);
+        });
+
         player.sendMessage(Component.text("テスト用のピンク羊を召喚しました。", NamedTextColor.LIGHT_PURPLE));
         return true;
     }
@@ -68,15 +73,8 @@ public final class Pinksheep extends JavaPlugin implements Listener, CommandExec
         if (invincibleSheep.contains(sheepId)) return;
         invincibleSheep.add(sheepId);
 
-        // --- エラー回避：Registryから直接属性を取得 ---
-        AttributeInstance scale = null;
-        try {
-            // 文字列指定することでコンパイルエラーを物理的に回避します
-            scale = sheep.getAttribute(Registry.ATTRIBUTE.get(NamespacedKey.minecraft("generic.scale")));
-        } catch (Exception e) {
-            getLogger().warning("Could not find SCALE attribute.");
-        }
-
+        // 1.20.5 / 1.21+ 対応の属性取得
+        AttributeInstance scale = sheep.getAttribute(Attribute.SCALE);
         if (scale != null) {
             scale.setBaseValue(3.5);
         }
@@ -92,8 +90,6 @@ public final class Pinksheep extends JavaPlugin implements Listener, CommandExec
             p.playSound(p.getLocation(), Sound.ENTITY_WITHER_SPAWN, 1.0f, 0.5f);
         }
 
-        final AttributeInstance finalScale = scale;
-
         new BukkitRunnable() {
             int timer = 60;
 
@@ -102,7 +98,12 @@ public final class Pinksheep extends JavaPlugin implements Listener, CommandExec
                 if (sheep.isDead() || timer <= 0) {
                     invincibleSheep.remove(sheepId);
                     sheep.setGlowing(false);
-                    if (finalScale != null) finalScale.setBaseValue(1.0);
+
+                    AttributeInstance currentScale = sheep.getAttribute(Attribute.SCALE);
+                    if (currentScale != null) {
+                        currentScale.setBaseValue(1.0);
+                    }
+
                     this.cancel();
                     return;
                 }
